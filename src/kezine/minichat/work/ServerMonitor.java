@@ -9,7 +9,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import kezine.minichat.Tools;
 import kezine.minichat.data.Client;
+import kezine.minichat.data.ServerInfos;
 import kezine.minichat.data.User;
 import kezine.minichat.tools.LoggerManager;
 
@@ -27,7 +29,7 @@ public final class ServerMonitor
     private boolean _ServerLocked;
     private HashMap<User,TopicThread> _Users;
     private boolean _AllowAnonymous;
-    
+    private ServerInfos _ServerInfos;
     public ServerMonitor()
     {
         this(81,20,"Default server name",true);
@@ -37,7 +39,6 @@ public final class ServerMonitor
         setMaxClient(maxClient);
         setListeningPort(listeningPort);
         setServerName(serverName);
-        initTopics();
         _Users = new HashMap<>(_MaxClient);
         _AllowAnonymous = allowAnonymous;
     }
@@ -45,7 +46,11 @@ public final class ServerMonitor
     synchronized private void initTopics()
     {
         _TopicThreads = new ArrayList<TopicThread>(20);
-        //_TopicThreads.add(new _TopicThreads);
+        _TopicThreads.add(new TopicThread(new Topic(), this));
+        for(TopicThread topicT : _TopicThreads)
+        {
+            topicT.start();
+        }
     }
     
     synchronized public void closeAllConnections(String message)
@@ -55,6 +60,7 @@ public final class ServerMonitor
         {
             topic.closeAllConnections(message);
         }
+        _ServerDispatchThread.clearPendingSocket();
         setServerLocked(false);
     }
     
@@ -70,13 +76,20 @@ public final class ServerMonitor
     }
     synchronized public void startServer() throws IOException
     {
-        //_ServerDispatchThread = new ServerDispatchThread(this,new ServerSocket(getListeningPort(),getMaxClient()+2));
-        //_ServerDispatchThread.start();
+        _ServerDispatchThread = new ServerDispatchThread(this, new ServerSocket(getListeningPort()), (getMaxClient()/2)+1);
+        initTopics();
+        _ServerDispatchThread.start();
     }
     
     synchronized public void stopServer(String message)
     {
-        
+        for(TopicThread topicT : _TopicThreads)
+        {
+            topicT.stopThread();
+        }
+        _ServerDispatchThread.stopThread();
+        LoggerManager.getMainLogger().info("Closing application");
+        System.exit(0);
     }
 
     synchronized public int getMaxClient() 
@@ -148,6 +161,23 @@ public final class ServerMonitor
         }
          LoggerManager.getMainLogger().config("Unlocked!");
     }
-
+    synchronized private void retrieveServerInfo()
+    {
+        HashMap<User,Topic> users = new HashMap<>();
+        for(TopicThread topicT : _TopicThreads)
+        {
+            for(User user : topicT.getUsers())
+            {
+                users.put(user, topicT.getTopicInfo());
+            }
+        }
+        _ServerInfos = (ServerInfos)Tools.copy(new ServerInfos(users, getServerName()));
+    }
+    synchronized public ServerInfos getServerInfos()
+    {
+        if(_ServerInfos == null)
+            retrieveServerInfo();
+        return _ServerInfos;
+    }
     
 }

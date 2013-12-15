@@ -10,12 +10,14 @@ import java.util.Objects;
 public class Message implements Serializable 
 {
     private MessageType _Type;
+    private User _Sender;
+    private Object _Destination;
     private Object _Message;
 
     
     public enum MessageType
     {
-        SERVER_INFO("Serveur Infos"),CLIENT_LOGIN("Client Login"),SERVER_MESSAGE("Server Message"),CHAT_MESSAGE("Chat message");
+        SERVER_INFO("Serveur Infos"),SERVER_BROADCAST("Server Broadcast"),PRIVATE_MESSAGE("Private Message"),CLIENT_LOGIN("Client Login"),CHAT_MESSAGE("Chat message");
         private String name;
         private MessageType(String typeName)
         {
@@ -37,16 +39,25 @@ public class Message implements Serializable
         
     }
     
-    public Message()
-    {
-        
-    }
     public Message(MessageType type, Object message)
+    {
+        this(type, message, null, (Object)null);
+    }
+    public Message(MessageType type, Object message,User sender, User destination)
+    {
+        this(type, message, sender, (Object)destination);
+    }
+    public Message(MessageType type, Object message,User sender, Topic destination)
+    {
+        this(type, message, sender, (Object)destination);
+    }
+    private Message(MessageType type, Object message,User sender, Object destination)
     {
         setType(type);
         setMessage(message);
+        setSender(sender);
+        setDestination(destination);
     }
-    
     public MessageType getType() 
     {
         return _Type;
@@ -65,6 +76,26 @@ public class Message implements Serializable
     public final void setMessage(Object message) 
     {
         _Message = message;
+    }
+    
+    public User getSender() 
+    {
+        return _Sender;
+    }
+
+    public final void setSender(User sender) 
+    {
+        _Sender = sender;
+    }
+
+    public Object getDestination() 
+    {
+        return _Destination;
+    }
+
+    public final void setDestination(Object destination) 
+    {
+        _Destination = destination;
     }
     
     @Override

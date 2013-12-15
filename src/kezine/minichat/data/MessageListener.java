@@ -1,6 +1,6 @@
-package kezine.minichat.work;
+package kezine.minichat.data;
 
-import kezine.minichat.data.ChatEvent;
+import kezine.minichat.events.ChatEvent;
 
 /**
  *

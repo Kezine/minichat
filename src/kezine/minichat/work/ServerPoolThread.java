@@ -35,7 +35,6 @@ public class ServerPoolThread extends BaseThread
         Socket currentSocket;
         while(getStatus().equals(ThreadStatus.RUNNING))
         {
-           
            currentSocket = _Sdt.getPendingSocket();
            /*
             * Si il y a eu un timeout (1s)=> on n'a pas de nouveau socket => on test si on dois pas se terminer

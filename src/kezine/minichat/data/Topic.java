@@ -1,10 +1,7 @@
 package kezine.minichat.data;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Objects;
-import kezine.minichat.data.User;
 
 /**
  *

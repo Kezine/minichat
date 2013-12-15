@@ -18,29 +18,30 @@ public class ServerDispatchThread extends BaseThread
     private ServerMonitor _ServerMonitor;
     private LinkedList<Socket> _PendingClients;
     private ArrayList<ServerPoolThread> _PoolThreads;
-       
+    private int _PoolSize;   
     public ServerDispatchThread(ServerMonitor server,ServerSocket serverSocket,int poolAcceptSize)
     {
         super("ServerDispatchThread");
         _ServerMonitor = server;
         _ServerSocket = serverSocket;
         _PendingClients = new LinkedList<>();
-        _PoolThreads = new ArrayList<>(poolAcceptSize);
+        _PoolSize = poolAcceptSize;
+        _PoolThreads = new ArrayList<>(_PoolSize);
     }
     @Override
     public void run() 
     {
         if(_ServerSocket.isBound())
         {
-            generatePool(_PoolThreads.size());
+            generatePool(_PoolSize);
             while(getStatus().equals(ThreadStatus.RUNNING))
             {
                 try
                 {
                     String address = null;
+                    Socket temp = _ServerSocket.accept();
                     synchronized(this)
                     {
-                        Socket temp = _ServerSocket.accept();
                         if(_ServerMonitor.isServerLocked())
                         {
                             try
@@ -117,12 +118,22 @@ public class ServerDispatchThread extends BaseThread
         try 
         {
             wait(1000);
-            return  _PendingClients.removeFirst();
+            if(_PendingClients.size() > 0)
+                return  _PendingClients.removeFirst();
+            else
+            {
+                LoggerManager.getMainLogger().info("Wait timeout");
+                return null;
+            }
         } 
         catch (InterruptedException ex) 
         {
-            LoggerManager.getMainLogger().config("Wait of Thread " + Thread.currentThread().getName() + " interrupted");
+            LoggerManager.getMainLogger().info("Wait of Thread interrupted");
             return null;
         }
+    }
+    public int getPoolSize()
+    {
+        return _PoolSize;
     }
  }
