@@ -17,8 +17,7 @@ public class Topic implements Serializable
     private String _Description;
     private boolean _Locked;
     private int _MaxSize;
-    private HashSet<User> _Users;
-    
+       
     public Topic()
     {
         this("Default toppic", "Welcome my friend", "This is the default topic", false, 20);
@@ -63,26 +62,6 @@ public class Topic implements Serializable
         _Description = description;
     }
     
-    synchronized public HashSet<User> getUsers()
-    {
-        return _Users;
-    }
-    
-    synchronized public boolean addUser(User user)
-    {
-        return _Users.add(user);
-    }
-    
-    synchronized public boolean removeUser(User user)
-    {
-        return _Users.remove(user);
-    }
-    
-    synchronized public int getUsersCount()
-    {
-        return _Users.size();
-    }
-
     synchronized public boolean isLocked() 
     {
         return _Locked;
@@ -104,11 +83,7 @@ public class Topic implements Serializable
         
         _MaxSize = maxSize;
     }
-    //TODO: Ajouter le message dans l'historique   
-    synchronized public void clearTopicUser(String message)
-    {
-        _Users.removeAll(_Users);
-    }
+    
 
     @Override
     public int hashCode() {

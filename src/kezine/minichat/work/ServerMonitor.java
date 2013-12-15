@@ -5,14 +5,19 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import kezine.minichat.data.Client;
 import kezine.minichat.data.User;
+import kezine.minichat.tools.LoggerManager;
 
 /**
  *
  * @author Kezine
  */
-public final class Server 
+public final class ServerMonitor 
 {
     private int _MaxClient;
     private int _ListeningPort;
@@ -20,18 +25,21 @@ public final class Server
     private ServerDispatchThread _ServerDispatchThread;
     private ArrayList<TopicThread> _TopicThreads;
     private boolean _ServerLocked;
-    private HashMap<User,ServerClientThread> _Users;
+    private HashMap<User,TopicThread> _Users;
+    private boolean _AllowAnonymous;
     
-    public Server()
+    public ServerMonitor()
     {
-        this(81,20,"Default server name");
+        this(81,20,"Default server name",true);
     }
-    public Server(int listeningPort, int maxClient, String serverName)
+    public ServerMonitor(int listeningPort, int maxClient, String serverName,boolean allowAnonymous)
     {
         setMaxClient(maxClient);
         setListeningPort(listeningPort);
         setServerName(serverName);
         initTopics();
+        _Users = new HashMap<>(_MaxClient);
+        _AllowAnonymous = allowAnonymous;
     }
     
     synchronized private void initTopics()
@@ -42,13 +50,10 @@ public final class Server
     
     synchronized public void closeAllConnections(String message)
     {
-        ServerClientThread ctTemp = null;
         setServerLocked(true);
-        for(User user : _Users.keySet())
+        for(TopicThread topic : _TopicThreads)
         {
-            ctTemp = _Users.get(user);
-            ctTemp.closeConnection(message);
-            _Users.remove(user);
+            topic.closeAllConnections(message);
         }
         setServerLocked(false);
     }
@@ -65,8 +70,8 @@ public final class Server
     }
     synchronized public void startServer() throws IOException
     {
-        _ServerDispatchThread = new ServerDispatchThread(this,new ServerSocket(getListeningPort(),getMaxClient()+2));
-        _ServerDispatchThread.start();
+        //_ServerDispatchThread = new ServerDispatchThread(this,new ServerSocket(getListeningPort(),getMaxClient()+2));
+        //_ServerDispatchThread.start();
     }
     
     synchronized public void stopServer(String message)
@@ -100,6 +105,8 @@ public final class Server
     synchronized public void setServerLocked(boolean isServerLocked)
     {
         _ServerLocked = isServerLocked;
+        if(!_ServerLocked)
+            notifyAll();
     }
     synchronized public String getServerName()
     {
@@ -109,4 +116,38 @@ public final class Server
     {
         _ServerName = name;
     }
+    
+    synchronized public boolean isAllowAnonymous() 
+    {
+        return _AllowAnonymous;
+    }
+
+    synchronized public void setAllowAnonymous(boolean allowAnonymous) 
+    {
+        _AllowAnonymous = allowAnonymous;
+    }
+    
+    synchronized public void dispatchClient(User user, Client client, Topic topic)
+    {
+        if(isServerLocked())
+           try{client.close();}catch(Exception ex){}
+        else
+        {
+            //TODO : ajouter le nouveau clien au topic
+        }
+    }
+    synchronized public void tryLock()
+    {
+        try 
+        {
+            LoggerManager.getMainLogger().config("Locking ...");
+            wait();
+            wait();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(ServerMonitor.class.getName()).log(Level.SEVERE, null, ex);
+        }
+         LoggerManager.getMainLogger().config("Unlocked!");
+    }
+
+    
 }

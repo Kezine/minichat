@@ -1,58 +1,75 @@
 package kezine.minichat.work;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import kezine.minichat.data.ThreadStatus;
 import kezine.minichat.tools.LoggerManager;
-
 /**
  *
  * @author Kezine
  */
-public class ServerDispatchThread extends Thread
+public class ServerDispatchThread extends BaseThread
 {
     private ServerSocket _ServerSocket;
-    private String _ErrorMessage;
-    private ThreadStatus _Status;
-    private Server _Server;
-    
-   
-    public ServerDispatchThread(Server server,ServerSocket serverSocket)
+    private ServerMonitor _ServerMonitor;
+    private LinkedList<Socket> _PendingClients;
+    private ArrayList<ServerPoolThread> _PoolThreads;
+       
+    public ServerDispatchThread(ServerMonitor server,ServerSocket serverSocket,int poolAcceptSize)
     {
         super("ServerDispatchThread");
-        _Server = server;
+        _ServerMonitor = server;
         _ServerSocket = serverSocket;
+        _PendingClients = new LinkedList<>();
+        _PoolThreads = new ArrayList<>(poolAcceptSize);
     }
     @Override
     public void run() 
     {
         if(_ServerSocket.isBound())
         {
-            Socket clientSocket;
-            setStatus(ThreadStatus.RUNNING);
+            generatePool(_PoolThreads.size());
             while(getStatus().equals(ThreadStatus.RUNNING))
             {
                 try
                 {
-                    clientSocket = _ServerSocket.accept();
-                    if(_Server.getOnlineClientsCounts() == _Server.getMaxClient())
+                    String address = null;
+                    synchronized(this)
                     {
-                        DataInputStream dis = clientSocket.getInputStream();
+                        Socket temp = _ServerSocket.accept();
+                        if(_ServerMonitor.isServerLocked())
+                        {
+                            try
+                            {
+                                temp.close();
+                            }catch(Exception ex){}
+                           _ServerMonitor.tryLock();
+                        }
+                        else
+                        {
+                            _PendingClients.add(temp);
+                            address = temp.getInetAddress().toString();
+                            this.notify();
+                        }
+                        
                     }
+                    if(address != null)
+                        LoggerManager.getMainLogger().info("New client : " + address + " added in pending list");
                 }
                 catch(IOException ex)
                 {
                     setErrorMessage("Erreur while acception new client : " + ex);
                 }
             }
-            setStatus(ThreadStatus.STOPPING);
+            closePool();
             try 
             {
                 _ServerSocket.close();
+                setStatus(ThreadStatus.STOPPED);
             } 
             catch (IOException ex) 
             {
@@ -65,26 +82,47 @@ public class ServerDispatchThread extends Thread
             setErrorMessage("ServerSocket is not bound !",Level.SEVERE);
             setStatus(ThreadStatus.STOPPED_WITH_ERROR);
         }
+        LoggerManager.getMainLogger().info("Thread terminated");
     }
-    synchronized public  ThreadStatus getStatus()
+    private void closePool()
     {
-        return _Status;
+        LoggerManager.getMainLogger().info("Closing thread pool");
+        for(ServerPoolThread thread : _PoolThreads)
+        {
+            thread.stopThread();
+        }
     }
-    synchronized private void setStatus(ThreadStatus status)
+    synchronized public void clearPendingSocket()
     {
-        _Status = status;
+        while(_PendingClients.size() !=0)
+        {
+            try 
+            {
+                _PendingClients.removeFirst().close();
+            } catch (IOException ex) {}
+        }
     }
-    synchronized public String getErrorMessage()
+    private void generatePool(int poolSize)
     {
-        return _ErrorMessage;
+        LoggerManager.getMainLogger().info("Generating thread pool");
+        for(int i = 0; i < poolSize; i++)
+        {
+            ServerPoolThread temp = new ServerPoolThread(i,this,_ServerMonitor);
+            _PoolThreads.add(temp);
+            temp.start();
+        }
     }
-    synchronized private void setErrorMessage(String errorMessage,Level level)
+    public synchronized Socket getPendingSocket() 
     {
-        _ErrorMessage = errorMessage;
-        LoggerManager.getMainLogger().log(level,_ErrorMessage);
+        try 
+        {
+            wait(1000);
+            return  _PendingClients.removeFirst();
+        } 
+        catch (InterruptedException ex) 
+        {
+            LoggerManager.getMainLogger().config("Wait of Thread " + Thread.currentThread().getName() + " interrupted");
+            return null;
+        }
     }
-    synchronized private void setErrorMessage(String errorMessage)
-    {
-        setErrorMessage(errorMessage,Level.WARNING);
-    }
-}
+ }
