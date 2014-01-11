@@ -14,7 +14,7 @@ import kezine.minichat.Tools;
 /**
  * Gère le fichier properties de l'application
  * 
- * @author Destiné Loïc
+ * @author Kezine
  */
 public class ConfigProperties
 {

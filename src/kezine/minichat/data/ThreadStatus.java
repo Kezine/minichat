@@ -1,7 +1,7 @@
 package kezine.minichat.data;
 
 /**
- *
+ * Gère les diffèrent status dans lequels les threads de l'application peuvent se trouver.
  * @author Kezine
  */
  public enum ThreadStatus

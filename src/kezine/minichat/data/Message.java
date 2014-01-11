@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- *
+ * Gère les données de base, d'un message client/serveur
  * @author Kezine
  */
 public class Message implements Serializable 

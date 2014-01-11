@@ -3,7 +3,7 @@ package kezine.minichat.data;
 import java.util.HashMap;
 
 /**
- *
+ * Gère les informations sur le serveur.
  * @author Kezine
  */
 public class ServerInfos 

@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- *
+ * Gère les informations relatives au topic.
  * @author Kezine
  */
 public class Topic implements Serializable

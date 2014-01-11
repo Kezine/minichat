@@ -9,7 +9,8 @@ import java.util.logging.Level;
 import kezine.minichat.data.ThreadStatus;
 import kezine.minichat.tools.LoggerManager;
 /**
- *
+ * Thread servant d'entrée pour le serveur de chat. Accepte les connections sur le port "Serveur" et transfert la connection dans fifo du pool de thread.
+ * Gère le création/suression de ce mème pool.
  * @author Kezine
  */
 public class ServerDispatchThread extends BaseThread
@@ -85,6 +86,9 @@ public class ServerDispatchThread extends BaseThread
         }
         LoggerManager.getMainLogger().info("Thread terminated");
     }
+    /**
+     * Arrète les threads du pool
+     */
     private void closePool()
     {
         LoggerManager.getMainLogger().info("Closing thread pool");
@@ -93,6 +97,9 @@ public class ServerDispatchThread extends BaseThread
             thread.stopThread();
         }
     }
+    /**
+     * Vide la fifo du pool de threads
+     */
     synchronized public void clearPendingSocket()
     {
         while(_PendingClients.size() !=0)
@@ -103,6 +110,10 @@ public class ServerDispatchThread extends BaseThread
             } catch (IOException ex) {}
         }
     }
+    /**
+     * Génère le pool de threads
+     * @param poolSize Nombre de threads dans le pool
+     */
     private void generatePool(int poolSize)
     {
         LoggerManager.getMainLogger().info("Generating thread pool");
@@ -113,6 +124,9 @@ public class ServerDispatchThread extends BaseThread
             temp.start();
         }
     }
+    /*
+     * Récupère le premier socket de la fifo du pool, ou null si vide
+     */
     public synchronized Socket getPendingSocket() 
     {
         try 
@@ -132,6 +146,9 @@ public class ServerDispatchThread extends BaseThread
             return null;
         }
     }
+    /**
+     * @return La taille du pool de threads
+     */
     public int getPoolSize()
     {
         return _PoolSize;

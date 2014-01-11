@@ -5,7 +5,7 @@ import kezine.minichat.data.ThreadStatus;
 import kezine.minichat.tools.LoggerManager;
 
 /**
- *
+ * Classe de base des threads de l'application
  * @author Kezine
  */
 public abstract class BaseThread extends Thread

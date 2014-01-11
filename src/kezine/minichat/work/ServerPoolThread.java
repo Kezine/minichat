@@ -7,7 +7,8 @@ import kezine.minichat.data.ThreadStatus;
 import kezine.minichat.tools.LoggerManager;
 
 /**
- *
+ * Thread qui gère le dialogue initial avec un client : authentification, demande d'infos.
+ * Avant le transfert aux threads des topic.(si besoin)
  * @author Kezine
  */
 public class ServerPoolThread extends BaseThread
@@ -55,7 +56,10 @@ public class ServerPoolThread extends BaseThread
         setStatus(ThreadStatus.STOPPED);
         LoggerManager.getMainLogger().info("Thread terminated");
     }
-    
+    /**
+     * Retourne l'id unique du thread(pour un pool)
+     * @return 
+     */
     synchronized public final int getPoolId()
     {
         return _PoolId;

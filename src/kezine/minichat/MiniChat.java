@@ -9,7 +9,7 @@ import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.ServerMonitor;
 
 /**
- *
+ * Point d'entrée de l'application "Minichat"
  * @author Kezine
  */
 public class MiniChat {

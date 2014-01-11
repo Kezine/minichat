@@ -19,7 +19,8 @@ import kezine.minichat.events.ChatEventListener;
 import kezine.minichat.tools.LoggerManager;
 
 /**
- *
+ * Gère le dialogue avec les utilisateurs du topic. Les utilisateurs son déja authentifié.
+ * Le thread transmet les messages entre utilisateur, et entre serveur <=> utilisateurs.
  * @author Kezine
  */
 public class TopicThread extends BaseThread
@@ -138,6 +139,10 @@ public class TopicThread extends BaseThread
         }
         LoggerManager.getMainLogger().info("Thread terminated");
     }
+    /**
+     * Ferme toutes le connections actives en notifiant le clients.
+     * @param message La raison de la fermeture (Transmise au client)
+     */
     public synchronized void closeAllConnections(String message)
     {
         for(User user : _Users.keySet())
@@ -160,10 +165,20 @@ public class TopicThread extends BaseThread
         }
         _Users.clear();
     }
+    /**
+     * retourne les utilisateurs du topic
+     * @return Les utilisateurs du topic
+     */
     synchronized public Set<User> getUsers()
     {
         return _Users.keySet();
     }
+    /**
+     * Ajoute un utilisateur au topic
+     * @param user Les informations sur l'utilisateur
+     * @param client Les données permetant le dialogue avec cet utilisateur
+     * @return False si l'utilisateur est déja présent dans le topic
+     */
     synchronized public boolean addUser(User user,Client client)
     {
         if(_Users.containsKey(user))
@@ -171,6 +186,11 @@ public class TopicThread extends BaseThread
         _Users.put(user,client);
         return true;
     }
+    /**
+     * Enlève un utilisateur du topic
+     * @param user L'utilisateur à enlever du topic
+     * @return False si l'utilisateur n'est pas présent dans le topic
+     */
     synchronized public boolean removeUser(User user)
     {
         if(!_Users.containsKey(user))
@@ -178,10 +198,18 @@ public class TopicThread extends BaseThread
         _Users.remove(user);
         return true;
     }
+    /**
+     * Retourne le nombre d'utilisateur du topic
+     * @return le nombre d'utilisateur du topic
+     */
     synchronized public int getUsersCount()
     {
         return _Users.size();
     }
+    /**
+     * Retourne les informations sur le topic
+     * @return les informations sur le topic
+     */
     synchronized public Topic getTopicInfo()
     {
         return _Topic;

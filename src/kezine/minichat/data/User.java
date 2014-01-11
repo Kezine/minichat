@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- *
+ * Gère les informations relative a l'utilisateur.
  * @author Kezine
  */
 public class User implements Serializable
