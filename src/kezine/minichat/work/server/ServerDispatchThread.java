@@ -1,13 +1,14 @@
-package kezine.minichat.work;
+package kezine.minichat.work.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.logging.Level;
-import kezine.minichat.data.ThreadStatus;
 import kezine.minichat.tools.LoggerManager;
+import kezine.minichat.work.BaseThread;
 /**
  * Thread servant d'entrée pour le serveur de chat. Accepte les connections sur le port "Serveur" et transfert la connection dans fifo du pool de thread.
  * Gère le création/suression de ce mème pool.
@@ -19,7 +20,8 @@ public class ServerDispatchThread extends BaseThread
     private ServerMonitor _ServerMonitor;
     private LinkedList<Socket> _PendingClients;
     private ArrayList<ServerPoolThread> _PoolThreads;
-    private int _PoolSize;   
+    private int _PoolSize;
+    
     public ServerDispatchThread(ServerMonitor server,ServerSocket serverSocket,int poolAcceptSize)
     {
         super("ServerDispatchThread");
@@ -40,6 +42,8 @@ public class ServerDispatchThread extends BaseThread
                 try
                 {
                     String address = null;
+                    //Met un timeout a l'accept, pour pouvoir tester l'etat du thread.
+                    _ServerSocket.setSoTimeout(1000);
                     Socket temp = _ServerSocket.accept();
                     synchronized(this)
                     {
@@ -61,6 +65,13 @@ public class ServerDispatchThread extends BaseThread
                     }
                     if(address != null)
                         LoggerManager.getMainLogger().info("New client : " + address + " added in pending list");
+                
+                }
+                catch(SocketTimeoutException ex)
+                {
+                    /*Rien a faire, se produit lors du timeout du accept.
+                    * Permet de tester l'etat du thread => eventuellement le stopper
+                    */
                 }
                 catch(IOException ex)
                 {
@@ -96,6 +107,15 @@ public class ServerDispatchThread extends BaseThread
         {
             thread.stopThread();
         }
+        LoggerManager.getMainLogger().info("Closing thread : Waiting ...");
+        for(ServerPoolThread thread : _PoolThreads)
+        {
+            while(thread.getStatus() != ThreadStatus.STOPPED && thread.getStatus() != ThreadStatus.STOPPED_WITH_ERROR)
+            {
+                try {sleep(10);} catch (InterruptedException ex) {}//Attente de l'arret du pool
+            }
+        }
+        LoggerManager.getMainLogger().info("Thread pool closed");
     }
     /**
      * Vide la fifo du pool de threads
@@ -124,8 +144,9 @@ public class ServerDispatchThread extends BaseThread
             temp.start();
         }
     }
-    /*
+    /**
      * Récupère le premier socket de la fifo du pool, ou null si vide
+     * @return Un socket en attente.
      */
     public synchronized Socket getPendingSocket() 
     {
@@ -136,13 +157,13 @@ public class ServerDispatchThread extends BaseThread
                 return  _PendingClients.removeFirst();
             else
             {
-                LoggerManager.getMainLogger().info("Wait timeout");
+                //LoggerManager.getMainLogger().info("Wait timeout");
                 return null;
             }
         } 
         catch (InterruptedException ex) 
         {
-            LoggerManager.getMainLogger().info("Wait of Thread interrupted");
+            //LoggerManager.getMainLogger().info("Wait of Thread interrupted");
             return null;
         }
     }

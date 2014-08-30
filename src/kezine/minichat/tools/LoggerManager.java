@@ -5,13 +5,12 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import javax.swing.JTextPane;
-import kezine.minichat.tools.TextPaneHandler;
 
 /**
  * Gère l'initialisation du logger et des handler de messages de log
  * Fichier/console/JList
  * 
- * @author Destiné Loïc
+ * @author Kezine
  */
 public class LoggerManager
 {
@@ -58,7 +57,7 @@ public class LoggerManager
 			logger.warning("Not able to get log file name from properties, trying to use default \"tempLog.txt\"");
 			try
 			{
-				_LogFile = new FileHandler("tempLog.txt");
+				_LogFile = new FileHandler("tempLog.txt",true);
 			}
 			catch (IOException ex2)
 			{

@@ -1,40 +1,44 @@
-package kezine.minichat.work;
+package kezine.minichat.work.server;
 
 import kezine.minichat.data.Topic;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.event.EventListenerList;
 import kezine.minichat.Tools;
 import kezine.minichat.data.Client;
+import kezine.minichat.data.Message;
 import kezine.minichat.data.ServerInfos;
 import kezine.minichat.data.User;
+import kezine.minichat.events.ServerEventListener;
+import kezine.minichat.events.ThreadEventListener;
 import kezine.minichat.tools.LoggerManager;
+import kezine.minichat.work.BaseThread;
 
-/**
- *
- * @author Kezine
- */
 /**
  * Classe gérant l'architecture/synchronisation/construction/création
  * des threads "Serveur". Elle joue aussi le role de moniteurs pour certains threads
  * @author Kezine
  */
-public final class ServerMonitor 
+public final class ServerMonitor
 {
+    private ServerDispatchThread _ServerDispatchThread;
+    private ArrayList<TopicThread> _TopicThreads;
+    
+    private Thread _ServerStatusThreadPooler;
+        
     private int _MaxClient;
     private int _ListeningPort;
     private String _ServerName;
-    private ServerDispatchThread _ServerDispatchThread;
-    private ArrayList<TopicThread> _TopicThreads;
     private boolean _ServerLocked;
     private HashMap<User,TopicThread> _Users;
     private boolean _AllowAnonymous;
     private ServerInfos _ServerInfos;
+    private EventListenerList _Listeners;
+    
     public ServerMonitor()
     {
         this(81,20,"Default server name",true);
@@ -46,6 +50,9 @@ public final class ServerMonitor
         setServerName(serverName);
         _Users = new HashMap<>(_MaxClient);
         _AllowAnonymous = allowAnonymous;
+        _Listeners = new EventListenerList();
+        _ServerInfos = null;
+        _ServerDispatchThread = null;
     }
     
     /**
@@ -54,12 +61,42 @@ public final class ServerMonitor
      */
     synchronized private void initTopics()
     {
-        _TopicThreads = new ArrayList<TopicThread>(20);
+        _TopicThreads = new ArrayList<>(20);
         _TopicThreads.add(new TopicThread(new Topic(), this));
         for(TopicThread topicT : _TopicThreads)
         {
             topicT.start();
         }
+    }
+    synchronized public boolean addTopic(Topic topic)
+    {
+        for(TopicThread tt : _TopicThreads)
+        {
+            if(tt.getTopicInfo().equals(topic))
+                return false;
+        }
+        TopicThread tt = new TopicThread(topic, this);
+        _TopicThreads.add(tt);
+        tt.start();
+        return true;
+    }
+    synchronized public void sendMessage(Message message)
+    {
+        if(message.getType().equals(Message.MessageType.SERVER_BROADCAST))
+        {
+            
+        }
+    }
+    /**
+     * Ejecte un utilisateur du serveur
+     * @param user L'utilisateur à éjecter
+     * @param message Message à l'intention de l'utilisateur
+     * @return true si l'utilisateur à été correctement éjecté, false en cas d'echec (Utilisateur deconnecté dans l'intervale)
+     */
+    synchronized public boolean kickUser(User user, String message)
+    {
+        
+        return false;
     }
     /*
      * Verouille temporairement le serveur et donne l'ordre au topic 
@@ -94,9 +131,17 @@ public final class ServerMonitor
      */
     synchronized public void startServer() throws IOException
     {
-        _ServerDispatchThread = new ServerDispatchThread(this, new ServerSocket(getListeningPort()), (getMaxClient()/2)+1);
+        fireServerStateChanged(BaseThread.ThreadStatus.INITED);
         initTopics();
+         
+        _ServerDispatchThread = new ServerDispatchThread(this, new ServerSocket(getListeningPort()), (getMaxClient()/2)+1);       
         _ServerDispatchThread.start();
+        
+        fireServerStateChanged(BaseThread.ThreadStatus.RUNNING);
+        
+         _ServerStatusThreadPooler = new Thread(new StatusPooler());
+        _ServerStatusThreadPooler.start();    
+        
     }
     /**
      * Arrete le serveur
@@ -104,13 +149,17 @@ public final class ServerMonitor
      */
     synchronized public void stopServer(String message)
     {
+        
+        if(_ServerDispatchThread == null)
+            throw new Error("Server is not started");
+        if(message == null)
+            throw new IllegalArgumentException("Stop Message can be void, but cannot be null");
+        fireServerStateChanged(BaseThread.ThreadStatus.STOPPING);
         for(TopicThread topicT : _TopicThreads)
-        {
+        {            
             topicT.stopThread();
         }
         _ServerDispatchThread.stopThread();
-        LoggerManager.getMainLogger().info("Closing application");
-        System.exit(0);
     }
     
     /**
@@ -152,8 +201,14 @@ public final class ServerMonitor
     synchronized public void setServerLocked(boolean isServerLocked)
     {
         _ServerLocked = isServerLocked;
+        
         if(!_ServerLocked)
+        {
             notifyAll();
+            LoggerManager.getMainLogger().info("Server is Unlocked");
+        }
+        else
+            LoggerManager.getMainLogger().info("Server is locked");
     }
     /**
      * 
@@ -191,13 +246,12 @@ public final class ServerMonitor
      * Specifie si le serveur accepte les utilisateurs anonymes
      * @param allowAnonymous True si il accepte les utilisateurs anonymes
      */
-    synchronized public void setAllowAnonymous(boolean allowAnonymous) 
+    public void setAllowAnonymous(boolean allowAnonymous) 
     {
         _AllowAnonymous = allowAnonymous;
     }
     
     /**
-     * 
      * Transfère un socket client au topic passé en paramètre.
      * Si le serveur est verouillé, cette méthode ferme la connection avec le client.
      * @param user Les information de l'utilisateur authentifié
@@ -210,7 +264,26 @@ public final class ServerMonitor
            try{client.close();}catch(Exception ex){}
         else
         {
-            //TODO : ajouter le nouveau clien au topic
+            TopicThread tpd = null;
+            boolean status = true;
+            for(TopicThread tp : _TopicThreads)
+            {
+                if(tp.getTopicInfo().getName().equals("Default toppic"))
+                    tpd = tp;
+                if(tp.getTopicInfo().getName().equals(topic.getName()))
+                {
+                    status = tp.addUser(user, client);
+                    if(status)
+                        break;
+                }
+            }
+            if(!status)
+                status = tpd.addUser(user, client);
+            if(!status)
+            {
+                LoggerManager.getMainLogger().warning("Attempt to add existing user("+user.getUsername()+") into the topic \""+ topic.getName() + "\"");
+                try {client.close();} catch (Exception ex) {}
+            }
         }
     }
     /**
@@ -233,25 +306,84 @@ public final class ServerMonitor
      */
     synchronized private void retrieveServerInfo()
     {
-        HashMap<User,Topic> users = new HashMap<>();
+        ArrayList<Topic> topics = new ArrayList<>();        
+        HashMap<User,String> users = new HashMap<>();
         for(TopicThread topicT : _TopicThreads)
         {
+            topics.add(topicT.getTopicInfo());
             for(User user : topicT.getUsers())
             {
-                users.put(user, topicT.getTopicInfo());
+                users.put(user, topicT.getTopicInfo().getName());
             }
         }
-        _ServerInfos = (ServerInfos)Tools.copy(new ServerInfos(users, getServerName()));
+        _ServerInfos = (ServerInfos)Tools.copy(new ServerInfos(topics,users, getServerName()));
     }
     /**
      * Retourne les informations serveurs en cache. Si le cache st invalidé, récupère les nouvelles informations.
      * @return Les informations sur le serveur
      */
-    synchronized public ServerInfos getServerInfos()
+    public ServerInfos getServerInfos()
     {
         if(_ServerInfos == null)
             retrieveServerInfo();
         return _ServerInfos;
     }
-    
+    public void addServerEventListener(ServerEventListener listener)
+    {
+        _Listeners.add(ServerEventListener.class,listener);
+    }
+    public void removeServerEventListener(ServerEventListener listener)
+    {
+        _Listeners.remove(ServerEventListener.class, listener);
+    }
+    public void fireServerStateChanged(BaseThread.ThreadStatus status)
+    {
+        for(ServerEventListener listener : _Listeners.getListeners(ServerEventListener.class))
+        {
+            listener.ServerStateChanged(status);
+        }
+    }
+    public void fireServerDataChanged()
+    {
+        for(ServerEventListener listener : _Listeners.getListeners(ServerEventListener.class))
+        {
+            listener.ServerDataChanged();
+        }
+    }
+    public void clearListeners()
+    {
+        _Listeners = new EventListenerList();
+    }
+
+        
+    private class StatusPooler implements Runnable
+    {
+
+        @Override
+        public void run() 
+        {
+            boolean isAllClosed;
+            do
+            {           
+                isAllClosed = true;
+                for(TopicThread tt : _TopicThreads)
+                {
+                    if(!tt.getStatus().equals(BaseThread.ThreadStatus.STOPPED) && !tt.getStatus().equals(BaseThread.ThreadStatus.STOPPED_WITH_ERROR))
+                    {
+                        isAllClosed = false;
+                        break;
+                    }             
+
+                }
+                if(isAllClosed && (!_ServerDispatchThread.getStatus().equals(BaseThread.ThreadStatus.STOPPED) && !_ServerDispatchThread.getStatus().equals(BaseThread.ThreadStatus.STOPPED_WITH_ERROR)))
+                    isAllClosed = false;
+                try {Thread.sleep(100);} catch (InterruptedException ex) {} 
+                
+            }while(!isAllClosed);
+            _ServerDispatchThread = null;
+            fireServerStateChanged(BaseThread.ThreadStatus.STOPPED);
+            LoggerManager.getMainLogger().info("Server Closed");            
+        }
+        
+    }
 }

@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import javax.swing.ImageIcon;
@@ -35,7 +34,7 @@ import kezine.minichat.tools.LoggerManager;
 
 /**
  *
- * @author Kezine
+ * @author Kezine Test
  */
 public class Tools {
         private static String _Repertoire = null;
@@ -298,7 +297,7 @@ public class Tools {
             }
             catch (IOException | ClassNotFoundException ex)
             {
-                 System.err.println("Deep Copy error : " + ex.getMessage());
+                 System.err.println("Deep Copy error ("+ex.getClass().getName()+") : " + ex.getMessage());
             }
             return obj;
 	}

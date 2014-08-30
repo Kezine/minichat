@@ -17,7 +17,7 @@ public class Topic implements Serializable
        
     public Topic()
     {
-        this("Default toppic", "Welcome my friend", "This is the default topic", false, 20);
+        this("Default topic", "Welcome my friend", "This is the default topic", false, 20);
     }
     
     public Topic(String name, String welcomeMessage, String description, boolean isLocked, int maxSize)
@@ -79,6 +79,11 @@ public class Topic implements Serializable
     {
         
         _MaxSize = maxSize;
+    }
+
+    @Override
+    public String toString() {
+        return _Name + " (" + _MaxSize + ")";
     }
     
 

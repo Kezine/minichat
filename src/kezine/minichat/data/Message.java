@@ -15,7 +15,7 @@ public class Message implements Serializable
     private Object _Message;
 
     
-    public enum MessageType
+    public static enum MessageType
     {
         SERVER_INFO("Serveur Infos"),SERVER_BROADCAST("Server Broadcast"),PRIVATE_MESSAGE("Private Message"),CLIENT_LOGIN("Client Login"),CHAT_MESSAGE("Chat message");
         private String name;

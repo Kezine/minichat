@@ -1,12 +1,9 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package kezine.minichat;
 
 import java.io.IOException;
+import javax.swing.SwingUtilities;
 import kezine.minichat.tools.LoggerManager;
-import kezine.minichat.work.ServerMonitor;
+import kezine.minichat.ui.ServerMainFrame;
 
 /**
  * Point d'entrée de l'application "Minichat"
@@ -43,7 +40,7 @@ public class MiniChat {
                             //argsValue = 3 << 1;
                             //interfaceTypeChosen = true;
                     break;
-                case "-G":  argsValue = 1 << 1;
+                case "-G":  argsValue = 1;
                     break;
                 default :   System.out.println("Unknow argument : " + args[i]);
                             System.exit(3);
@@ -70,11 +67,22 @@ public class MiniChat {
     public static void startServerApplication(boolean isGraphical) throws IOException
     {
         LoggerManager.getMainLogger().info("Starting server application");
-        ServerMonitor sm = new ServerMonitor();
-        sm.startServer();
+        
         if(isGraphical)
         {
             LoggerManager.getMainLogger().info("Starting graphical interface");
+            final ServerMainFrame sf = new ServerMainFrame();
+            Tools.setLookAndFeel(sf, "Windows");
+            SwingUtilities.invokeLater(new Runnable() {               
+                @Override
+                public void run() {
+                    sf.setVisible(true);
+                }
+            });
+        }
+        else
+        {
+            
         }
     }
 }
