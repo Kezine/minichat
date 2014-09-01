@@ -31,6 +31,14 @@ public class ServerDispatchThread extends BaseThread
         _PoolSize = poolAcceptSize;
         _PoolThreads = new ArrayList<>(_PoolSize);
     }
+    public int getListeningPort()
+    {
+        return _ServerSocket.getLocalPort();
+    }
+    public String getInetAddress()
+    {
+        return _ServerSocket.getInetAddress().toString();
+    }
     @Override
     public void run() 
     {

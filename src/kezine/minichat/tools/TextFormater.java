@@ -9,7 +9,7 @@ import java.util.logging.LogRecord;
 public class TextFormater extends Formatter
 {
 
-	@Override
+	/*@Override
 	public String format(LogRecord record)
 	{
 		int lastIndex = record.getSourceClassName().lastIndexOf(".");
@@ -23,8 +23,22 @@ public class TextFormater extends Formatter
                                     }
 		// TODO afficher le printStackTrace pour les warning et severe
 		return message;
+	}*/
+        @Override
+	public String format(LogRecord record)
+	{
+		int lastIndex = record.getSourceClassName().lastIndexOf(".");
+		lastIndex = record.getSourceClassName().lastIndexOf(".", lastIndex - 1);
+		String message = getDate(record.getMillis()) + "[" + record.getLevel().getName() + "] "+Thread.currentThread().getName()+" : "
+				+ record.getMessage() + "\n";
+                                if(record.getParameters() != null)
+                                    for(Object o : record.getParameters())
+                                    {
+                                        message += "\t=> " + o + "\n";
+                                    }
+		// TODO afficher le printStackTrace pour les warning et severe
+		return message;
 	}
-
 	/**
 	 * Appelé au debut de l'utilisation du handler qui l'utilise
 	 */

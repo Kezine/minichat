@@ -18,7 +18,7 @@ public abstract class BaseThread extends Thread
     public enum ThreadStatus
     {
        INITED("Innited"),RUNNING("Running"),STOPPING("Stopping"),FAILED("Failed"),STOPPED("Stopped"),STOPPED_WITH_ERROR("StoppedWithError");
-       private String name;
+       private final String name;
        private ThreadStatus(String typeName)
        {
                name = typeName;
@@ -39,7 +39,7 @@ public abstract class BaseThread extends Thread
     }
     private String _ErrorMessage;
     private ThreadStatus _Status;
-    private EventListenerList _Listeners;
+    protected EventListenerList _Listeners;
     
     public BaseThread(String name)
     {
@@ -70,14 +70,14 @@ public abstract class BaseThread extends Thread
     {
         setErrorMessage(errorMessage,Level.WARNING);
     }
-    synchronized public final void stopThread()
+    synchronized public  void stopThread()
     {
         setStatus(ThreadStatus.STOPPING);
     }
     @Override
     public void start()
     {
-        LoggerManager.getMainLogger().info("Thread " + getName() + " is starting");
+        LoggerManager.getMainLogger().info("Thread "+getName()+" is starting");
         setStatus(ThreadStatus.RUNNING);
         super.start();
     }
@@ -96,9 +96,5 @@ public abstract class BaseThread extends Thread
         {
             listener.ThreadStatusChanged(this,status);
         }
-    }    
-    public void clearListeners()
-    {
-        _Listeners = new EventListenerList();
     }
 }

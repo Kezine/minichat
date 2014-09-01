@@ -1,6 +1,5 @@
-package kezine.minichat.ui;
+package kezine.minichat.ui.server;
 
-import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,7 +24,7 @@ import kezine.minichat.work.server.ServerMonitor;
  */
 public class ServerMainFrame extends javax.swing.JFrame implements ServerEventListener {
 
-    private ServerMonitor _ServerMonitor;
+    private final ServerMonitor _ServerMonitor;
     private final ArrayList<Topic> [] _Topics;
     private final HashMap<User,String> [] _Users;
     private boolean shutdownRequest;
@@ -41,6 +40,7 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
         _Users = new HashMap[1];
         _Topics = new ArrayList[1];
         shutdownRequest = false;
+        setTitle("Server is offline");
     }
 
     /**
@@ -257,7 +257,8 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
                 initListFromData();
                 toggleSeverDependentControl(false);
                 jButtonServerState.setEnabled(false);
-                _ServerMonitor.stopServer("None");                
+                _ServerMonitor.stopServer("None");  
+                setTitle("Server is shutting down ...");
             }
         } 
         catch (IOException ex) 
@@ -317,10 +318,12 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
         if(!jButtonServerState.getText().equals("Start Server"))
         {
             _ServerMonitor.stopServer("Window closing");
-            Closing dialog = new Closing(this, true);
+            setTitle("Server is shutting down ...");            
+            setEnabled(false);
+            /*Closing dialog = new Closing(this, true);
             dialog.setAlwaysOnTop(true);
             _ServerMonitor.addServerEventListener(dialog);
-            dialog.setVisible(true);
+            dialog.setVisible(true);*/
         }
         else
         {
@@ -385,35 +388,41 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
     @Override
     public void ServerStateChanged(BaseThread.ThreadStatus status) 
     {
-        final BaseThread.ThreadStatus ts = status;
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() 
-            {
-                jLabelServerStatus.setText(ts.toString());
-                if(ts == BaseThread.ThreadStatus.RUNNING)
-                {
-                    toggleSeverDependentControl(true);
-                    jButtonServerState.setEnabled(true);
         
-                    jButtonServerState.setText("Stop Server");
-                    ServerInfos si = _ServerMonitor.getServerInfos();
-                    _Users[0] = si._Users;
-                    _Topics[0] = si._Topics;
-                    
-                    initListFromData();
-                    
-                }
-                else if(ts == BaseThread.ThreadStatus.STOPPED_WITH_ERROR || ts == BaseThread.ThreadStatus.STOPPED)
+        if(shutdownRequest && (status.equals(BaseThread.ThreadStatus.STOPPED) || status.equals(BaseThread.ThreadStatus.STOPPED_WITH_ERROR)))
+               System.exit(0);
+        else
+        {
+            final BaseThread.ThreadStatus ts = status; 
+            SwingUtilities.invokeLater(new Runnable() {
+
+                @Override
+                public void run() 
                 {
-                    if(!shutdownRequest)
+                    jLabelServerStatus.setText(ts.toString());
+                    if(ts == BaseThread.ThreadStatus.RUNNING)
+                    {
+                        toggleSeverDependentControl(true);
+                        jButtonServerState.setEnabled(true);
+
+                        jButtonServerState.setText("Stop Server");
+                        ServerInfos si = _ServerMonitor.getServerInfos();
+                        _Users[0] = si._Users;
+                        _Topics[0] = si._Topics;
+
+                        initListFromData();
+                        setTitle("Server is online");
+
+                    }
+                    else if(ts == BaseThread.ThreadStatus.STOPPED_WITH_ERROR || ts == BaseThread.ThreadStatus.STOPPED)
                     {
                         jButtonServerState.setEnabled(true);
                         jButtonServerState.setText("Start Server");
+                        setTitle("Server is offline");
                     }
                 }
-            }
-        });
+            });
+        }
+        
     }
 }

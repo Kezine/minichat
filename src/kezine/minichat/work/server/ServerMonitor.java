@@ -13,6 +13,8 @@ import kezine.minichat.data.Client;
 import kezine.minichat.data.Message;
 import kezine.minichat.data.ServerInfos;
 import kezine.minichat.data.User;
+import kezine.minichat.events.ChatEvent;
+import kezine.minichat.events.ChatEventListener;
 import kezine.minichat.events.ServerEventListener;
 import kezine.minichat.events.ThreadEventListener;
 import kezine.minichat.tools.LoggerManager;
@@ -23,7 +25,7 @@ import kezine.minichat.work.BaseThread;
  * des threads "Serveur". Elle joue aussi le role de moniteurs pour certains threads
  * @author Kezine
  */
-public final class ServerMonitor
+public final class ServerMonitor implements ChatEventListener
 {
     private ServerDispatchThread _ServerDispatchThread;
     private ArrayList<TopicThread> _TopicThreads;
@@ -65,6 +67,7 @@ public final class ServerMonitor
         _TopicThreads.add(new TopicThread(new Topic(), this));
         for(TopicThread topicT : _TopicThreads)
         {
+            topicT.addChatEventListener(this);
             topicT.start();
         }
     }
@@ -77,6 +80,7 @@ public final class ServerMonitor
         }
         TopicThread tt = new TopicThread(topic, this);
         _TopicThreads.add(tt);
+        tt.addChatEventListener(this);
         tt.start();
         return true;
     }
@@ -141,7 +145,7 @@ public final class ServerMonitor
         
          _ServerStatusThreadPooler = new Thread(new StatusPooler());
         _ServerStatusThreadPooler.start();    
-        
+        LoggerManager.getMainLogger().info("Server listenig on " + _ServerDispatchThread.getInetAddress()+":"+_ServerDispatchThread.getListeningPort());
     }
     /**
      * Arrete le serveur
@@ -265,24 +269,42 @@ public final class ServerMonitor
         else
         {
             TopicThread tpd = null;
-            boolean status = true;
+            Topic topicInfos = null;
+            short status = 0;
             for(TopicThread tp : _TopicThreads)
             {
-                if(tp.getTopicInfo().getName().equals("Default toppic"))
+                if(tp.getTopicInfo().getName().equals("Default topic"))
+                {
                     tpd = tp;
+                    topicInfos = tpd.getTopicInfo();
+                }
                 if(tp.getTopicInfo().getName().equals(topic.getName()))
                 {
-                    status = tp.addUser(user, client);
-                    if(status)
-                        break;
+                    if(tp.addUser(user, client))
+                    {
+                        status = 1;
+                        topicInfos = topic;
+                    }
+                    else
+                        status = -1;
+                    break;
+                    
                 }
             }
-            if(!status)
-                status = tpd.addUser(user, client);
-            if(!status)
+            if(status == 0)
             {
-                LoggerManager.getMainLogger().warning("Attempt to add existing user("+user.getUsername()+") into the topic \""+ topic.getName() + "\"");
+                if(!tpd.addUser(user, client))
+                    status = -1;
+            }
+            if(status == -1)
+            {
+                LoggerManager.getMainLogger().warning("Attempt to add existing user("+user.getUsername()+") into the topic \""+ topicInfos.getName() + "\"");
                 try {client.close();} catch (Exception ex) {}
+            }
+            else
+            {
+                LoggerManager.getMainLogger().info("User("+user.getUsername()+") Dispatched to topic \""+ tpd.getName() +"\" IP :" + client.getSocket().getInetAddress());
+
             }
         }
     }
@@ -295,7 +317,7 @@ public final class ServerMonitor
         {
             LoggerManager.getMainLogger().config("Locking ...");
             wait();
-            wait();
+            //wait();
         } catch (InterruptedException ex) {
             Logger.getLogger(ServerMonitor.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -353,6 +375,12 @@ public final class ServerMonitor
     public void clearListeners()
     {
         _Listeners = new EventListenerList();
+    }
+
+    @Override
+    public void processChatEvent(ChatEvent event) 
+    {
+        LoggerManager.getMainLogger().info("["+event.getType()+"] Username : "+((User)event.getComplement()).getUsername());
     }
 
         

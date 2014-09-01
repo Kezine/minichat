@@ -46,23 +46,26 @@ public class ServerPoolThread extends BaseThread
             */
            if(currentSocket != null)
            {
-               try(Client client = new Client(currentSocket);)
+               try
                {
-                   
+                    Client client = new Client(currentSocket);
                     client.OpenConnection();
                     try
                     {
-                        ObjectInputStream ois = new ObjectInputStream(client.getDataInputStream());
-                        ObjectOutputStream oos = new ObjectOutputStream(client.getDataOutputStream());
+                        ObjectInputStream ois = client.getObjectInputStream();
+                        ObjectOutputStream oos = client.getObjectOutputStream();
                         Message message = (Message)ois.readObject();
+                        
                         if(message.getType().equals(Message.MessageType.CLIENT_LOGIN))
                         {
                             //TODO : Securité =>test longueur de la taille du nom du topic/taille message reçu
+                            LoggerManager.getMainLogger().info("User("+message.getSender().getUsername()+") Issued login IP :" + client.getSocket().getInetAddress());
+
                             Topic topic = new Topic(message.getDestination().toString(), null, null, true, 0);
                             message.setMessage("Ok,Dispatched to topic");
                             oos.writeObject(message);
+                            
                             _ServerMonitor.dispatchClient(message.getSender(), client, topic);
-                            LoggerManager.getMainLogger().info("User("+message.getSender().getUsername()+") dispatched. IP : " + client.getSocket().getInetAddress());
                         }
                         else if(message.getType().equals(Message.MessageType.SERVER_INFO))
                         {

@@ -3,7 +3,8 @@ package kezine.minichat;
 import java.io.IOException;
 import javax.swing.SwingUtilities;
 import kezine.minichat.tools.LoggerManager;
-import kezine.minichat.ui.ServerMainFrame;
+import kezine.minichat.ui.client.ClientMainFrame;
+import kezine.minichat.ui.server.ServerMainFrame;
 
 /**
  * Point d'entrée de l'application "Minichat"
@@ -62,6 +63,18 @@ public class MiniChat {
         if(isGraphical)
         {
             LoggerManager.getMainLogger().info("Starting graphical interface");
+            final ClientMainFrame cf = new ClientMainFrame();
+            Tools.setLookAndFeel(cf, "Windows");
+            SwingUtilities.invokeLater(new Runnable() {               
+                @Override
+                public void run() {
+                    cf.setVisible(true);
+                }
+            });
+        }
+        else
+        {
+            
         }
     }
     public static void startServerApplication(boolean isGraphical) throws IOException

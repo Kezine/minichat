@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package kezine.minichat.ui;
+package kezine.minichat.ui.server;
 
 /**
  *

@@ -17,7 +17,7 @@ public class ChatEvent
     }
     public ChatEvent(Object source,ChatEventType type, String message,Object complement)
     {
-        if(_Source == null)
+        if(source == null)
             throw new IllegalArgumentException("Event source cannot be null");
         _Source = source;
         _Type = type;

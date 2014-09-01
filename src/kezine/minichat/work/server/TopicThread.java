@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.EventListenerList;
@@ -26,18 +27,16 @@ import kezine.minichat.work.BaseThread;
 public class TopicThread extends BaseThread
 {
     private Topic _Topic;
-    private HashMap<User, Client> _Users;
+    private ConcurrentHashMap<User, Client> _Users;
     private ServerMonitor _ServerMonitor;
-    private EventListenerList _Listeners;
     private LinkedList<Message> _PendingMessages;
         
     public TopicThread(Topic topic,ServerMonitor serverMonitor)
     {
         super("TopicThread-"+topic.getName());
         _Topic = topic;
-        _Users = new HashMap<>();
+        _Users = new ConcurrentHashMap<>();
         _ServerMonitor = serverMonitor;
-        _Listeners = new EventListenerList();
         _PendingMessages = new LinkedList<>();
     }
     @Override
@@ -45,10 +44,10 @@ public class TopicThread extends BaseThread
     {
         while(getStatus().equals(ThreadStatus.RUNNING))
         {
-            if(_ServerMonitor.isServerLocked())
+            /*if(_ServerMonitor.isServerLocked())//Fonctionne, mais inutile
                 _ServerMonitor.tryLock();
             else
-            {
+            {*/
                 /**
                  * Permet de stocker la liste des clients qui se sont deconnecté.
                  * Détecté lors d'une tentative d'ecriture sur le socket. Reparcouru a la fin four la fermeture propre des sockets
@@ -69,14 +68,14 @@ public class TopicThread extends BaseThread
                         client = _Users.get(user);
                         try 
                         {
-                            if(client.getDataInputStream().available() > 0)
+                            if(client.inputAvailable() > 0)
                             {
-                                ois = new ObjectInputStream(client.getDataInputStream());
+                                ois = client.getObjectInputStream();
                                 try 
                                 {
                                     Message message = (Message)ois.readObject();
                                     Message.MessageType type = message.getType();
-                                    if(type.equals(Message.MessageType.CHAT_MESSAGE))
+                                    if(type == Message.MessageType.CHAT_MESSAGE)
                                     {
                                         fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.MESSAGE, message.getMessage().toString(), user));
                                         /*
@@ -85,18 +84,23 @@ public class TopicThread extends BaseThread
                                          */
                                         for(User luser : _Users.keySet())
                                         {
-                                            if(!_InvalidClient.containsKey(user) && !luser.equals(user))
+                                            if(!_InvalidClient.containsKey(user))// && !luser.equals(user))
                                             {
-                                                oos = new ObjectOutputStream(_Users.get(luser).getDataOutputStream());
-                                                try{oos.writeObject(new Message(Message.MessageType.CHAT_MESSAGE, new Object[]{luser,message.getMessage()}));}
+                                                oos = _Users.get(luser).getObjectOutputStream();
+                                                System.out.println("Envois");
+                                                try
+                                                {
+                                                    oos.writeObject(new Message(type, message.getMessage(), luser, new User()));
+                                                }
                                                 catch(IOException ex)
                                                 {
                                                     _InvalidClient.put(luser,_Users.get(luser));
+                                                    System.out.println("invalid");
                                                 }
                                             }
                                         }
                                     }
-                                    else if(type.equals(Message.MessageType.PRIVATE_MESSAGE))
+                                    else if(type == Message.MessageType.PRIVATE_MESSAGE)
                                     {
                                          fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.MESSAGE, message.getMessage().toString(), user));
                                          try
@@ -105,7 +109,7 @@ public class TopicThread extends BaseThread
                                              Client cdestination = _Users.get(user);
                                              if(cdestination != null)
                                              {
-                                                oos = new ObjectOutputStream(cdestination.getDataOutputStream());
+                                                oos = cdestination.getObjectOutputStream();
                                                 oos.writeObject(message);
                                              }
                                              else
@@ -119,10 +123,10 @@ public class TopicThread extends BaseThread
 
                                          }
                                     }
-                                    else if (type.equals(Message.MessageType.SERVER_INFO))
+                                    else if (type == Message.MessageType.SERVER_INFO)
                                     {
                                         fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.MESSAGE, "User requested server Info (IP:"+client.getSocket().getInetAddress()+")", user));
-                                        oos = new ObjectOutputStream(client.getDataOutputStream());
+                                        oos = client.getObjectOutputStream();
                                         oos.writeObject(new Message(Message.MessageType.SERVER_INFO, _ServerMonitor.getServerInfos()));
                                     }
                                     else
@@ -179,7 +183,7 @@ public class TopicThread extends BaseThread
                                 client = _Users.get(user);
                                 try 
                                 {
-                                    oos = new ObjectOutputStream(_Users.get(user).getDataOutputStream());
+                                    oos = _Users.get(user).getObjectOutputStream();
                                     oos.writeObject(message);
                                 } 
                                 catch (IOException ex) 
@@ -205,7 +209,7 @@ public class TopicThread extends BaseThread
                                     client = _Users.get(user);
                                     try 
                                     {
-                                        oos = new ObjectOutputStream(_Users.get(user).getDataOutputStream());
+                                        oos = _Users.get(user).getObjectOutputStream();
                                         oos.writeObject(message);
                                     } 
                                     catch (IOException ex) 
@@ -227,9 +231,16 @@ public class TopicThread extends BaseThread
                 {
                     _Users.remove(user);
                     fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.DISCONNECTION, null, user));
-                    try {_InvalidClient.get(user).close();} catch (Exception ex) {Logger.getLogger(TopicThread.class.getName()).log(Level.SEVERE, null, ex);}
+                    try 
+                    {
+                        _InvalidClient.get(user).close();
+                    }
+                    catch (Exception ex) 
+                    {
+                        LoggerManager.getMainLogger().warning("Error while closing clent stream : " + ex.getMessage());
+                    }
                 }
-            }
+            //}
         }        
         closeAllConnections("Server Closed");
         setStatus(ThreadStatus.STOPPED);
@@ -243,10 +254,10 @@ public class TopicThread extends BaseThread
     {
         for(User user : _Users.keySet())
         {
-            try(Client temp = _Users.get(user);)
+            try
             {
-                
-                try(ObjectOutputStream oos = new ObjectOutputStream(temp.getDataOutputStream());)
+                Client temp = _Users.get(user);
+                try(ObjectOutputStream oos = temp.getObjectOutputStream())
                 {
                     oos.writeObject(new Message(Message.MessageType.SERVER_INFO, message));
                     oos.flush();
@@ -325,10 +336,5 @@ public class TopicThread extends BaseThread
         {
             listener.processChatEvent(event);
         }
-    }
-    public void clearListeners()
-    {
-        _Listeners = new EventListenerList();
-    }
-    
+    }    
 }

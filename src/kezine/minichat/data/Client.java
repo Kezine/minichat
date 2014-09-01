@@ -1,18 +1,21 @@
 package kezine.minichat.data;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /**
  * Gère les informations de connection permetant le dialogue avec un client.
  * @author Kezine
  */
-public class Client implements AutoCloseable
+public class Client //implements AutoCloseable
 {
-    private DataOutputStream _DataOutputStream;
-    private DataInputStream _DataInputStream;
+    private ObjectOutputStream _ObjectOutputStream;
+    private ObjectInputStream _ObjectInputStream;
+    private BufferedInputStream _BufferedInputStream;
     private Socket _Socket;
     private boolean _Opened;
     
@@ -21,8 +24,8 @@ public class Client implements AutoCloseable
         if(socket == null)
             throw new IllegalArgumentException("Socket cannot be null");
         _Socket = socket;
-        _DataOutputStream = null;
-        _DataInputStream = null;
+        _ObjectOutputStream = null;
+        _ObjectInputStream = null;
         _Opened = false;
     }
     /**
@@ -32,32 +35,39 @@ public class Client implements AutoCloseable
      */
     public void OpenConnection() throws IOException, Exception
     {
-        if(_Socket.isClosed() && _Socket.isBound())
+        if((_Socket.isClosed() && !_Socket.isBound()) || (!_Socket.isClosed() && _Socket.isBound()))// && _Socket.isBound())
         {
             if(_Opened)
                 return;
-            _DataInputStream = new DataInputStream(_Socket.getInputStream());
-            _DataOutputStream = new DataOutputStream(_Socket.getOutputStream());
+            _BufferedInputStream = new BufferedInputStream(_Socket.getInputStream());
+            _ObjectInputStream = new ObjectInputStream(_BufferedInputStream);
+            _ObjectOutputStream = new ObjectOutputStream(_Socket.getOutputStream());
             _Opened = true;
         }
         else
             throw new Exception("Socket is not valid (closed or not bound)");
     }
+    public int inputAvailable() throws IOException
+    {
+        if(_BufferedInputStream != null)
+            return _BufferedInputStream.available();
+        return 0;
+    }
     /**
      * 
      * @return Le flux de comunication sortant du client
      */
-    public DataOutputStream getDataOutputStream() 
+    public ObjectOutputStream getObjectOutputStream() 
     {
-        return _DataOutputStream;
+       return _ObjectOutputStream;
     }
     /**
      * 
      * @return Le flux de comunication entrant du client
      */
-    public DataInputStream getDataInputStream() 
+    public ObjectInputStream getObjectInputStream() 
     {
-        return _DataInputStream;
+       return _ObjectInputStream;
     }
     /**
      * 
@@ -68,13 +78,15 @@ public class Client implements AutoCloseable
         return _Socket;
     }
 
-    @Override
+    //@Override
     public void close() throws Exception 
     {
-        if(_DataInputStream != null)
-            _DataInputStream.close();
-        if(_DataOutputStream != null)
-            _DataOutputStream.close();
-        _Socket.close();
+        //Un seul appel à la fermeture d'un des 2 flux ferme tout
+        /*if(_ObjectInputStream != null)
+            _ObjectInputStream.close();*/
+        if(_ObjectOutputStream != null)
+            _ObjectOutputStream.close();
+        /*if(!_Socket.isClosed())
+            _Socket.close();*/
     }
 }
