@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.event.EventListenerList;
 import kezine.minichat.Tools;
 import kezine.minichat.data.Client;
@@ -17,8 +15,9 @@ import kezine.minichat.events.ChatEvent;
 import kezine.minichat.events.ChatEventListener;
 import kezine.minichat.events.ServerEventListener;
 import kezine.minichat.events.ThreadEventListener;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Classe gérant l'architecture/synchronisation/construction/création
@@ -27,6 +26,7 @@ import kezine.minichat.work.BaseThread;
  */
 public final class ServerMonitor implements ChatEventListener
 {
+    private final Logger logger = Logger.getLogger(this.getClass());
     private ServerDispatchThread _ServerDispatchThread;
     private ArrayList<TopicThread> _TopicThreads;
     
@@ -145,7 +145,7 @@ public final class ServerMonitor implements ChatEventListener
         
          _ServerStatusThreadPooler = new Thread(new StatusPooler());
         _ServerStatusThreadPooler.start();    
-        LoggerManager.getMainLogger().info("Server listenig on " + _ServerDispatchThread.getInetAddress()+":"+_ServerDispatchThread.getListeningPort());
+        getLogger().info("Server listenig on " + _ServerDispatchThread.getInetAddress()+":"+_ServerDispatchThread.getListeningPort());
     }
     /**
      * Arrete le serveur
@@ -209,10 +209,10 @@ public final class ServerMonitor implements ChatEventListener
         if(!_ServerLocked)
         {
             notifyAll();
-            LoggerManager.getMainLogger().info("Server is Unlocked");
+           getLogger().info("Server is Unlocked");
         }
         else
-            LoggerManager.getMainLogger().info("Server is locked");
+           getLogger().info("Server is locked");
     }
     /**
      * 
@@ -298,12 +298,12 @@ public final class ServerMonitor implements ChatEventListener
             }
             if(status == -1)
             {
-                LoggerManager.getMainLogger().warning("Attempt to add existing user("+user.getUsername()+") into the topic \""+ topicInfos.getName() + "\"");
+                getLogger().warn("Attempt to add existing user("+user.getUsername()+") into the topic \""+ topicInfos.getName() + "\"");
                 try {client.close();} catch (Exception ex) {}
             }
             else
             {
-                LoggerManager.getMainLogger().info("User("+user.getUsername()+") Dispatched to topic \""+ tpd.getName() +"\" IP :" + client.getSocket().getInetAddress());
+               getLogger().info("User("+user.getUsername()+") Dispatched to topic \""+ tpd.getName() +"\" IP :" + client.getSocket().getInetAddress());
 
             }
         }
@@ -315,13 +315,13 @@ public final class ServerMonitor implements ChatEventListener
     {
         try 
         {
-            LoggerManager.getMainLogger().config("Locking ...");
+            getLogger().log(Level.TRACE,"Locking ...");
             wait();
             //wait();
         } catch (InterruptedException ex) {
-            Logger.getLogger(ServerMonitor.class.getName()).log(Level.SEVERE, null, ex);
+            getLogger().log(Level.ERROR, null, ex);
         }
-         LoggerManager.getMainLogger().config("Unlocked!");
+        getLogger().log(Level.TRACE,"Unlocked!");
     }
     /**
      * Recupère les information serveurs et les met en "Cache"
@@ -380,7 +380,7 @@ public final class ServerMonitor implements ChatEventListener
     @Override
     public void processChatEvent(ChatEvent event) 
     {
-        LoggerManager.getMainLogger().info("["+event.getType()+"] Username : "+((User)event.getComplement()).getUsername());
+       getLogger().info("["+event.getType()+"] Username : "+((User)event.getComplement()).getUsername());
     }
 
         
@@ -410,8 +410,13 @@ public final class ServerMonitor implements ChatEventListener
             }while(!isAllClosed);
             _ServerDispatchThread = null;
             fireServerStateChanged(BaseThread.ThreadStatus.STOPPED);
-            LoggerManager.getMainLogger().info("Server Closed");            
+            getLogger().info("Server Closed");            
         }
         
+    }
+    
+    protected final Logger getLogger()
+    {
+        return logger;
     }
 }

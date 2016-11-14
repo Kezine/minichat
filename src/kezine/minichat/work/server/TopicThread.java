@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.event.EventListenerList;
 import kezine.minichat.data.Client;
 import kezine.minichat.data.Message;
@@ -16,7 +14,6 @@ import kezine.minichat.data.Topic;
 import kezine.minichat.data.User;
 import kezine.minichat.events.ChatEvent;
 import kezine.minichat.events.ChatEventListener;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
 
 /**
@@ -26,10 +23,10 @@ import kezine.minichat.work.BaseThread;
  */
 public class TopicThread extends BaseThread
 {
-    private Topic _Topic;
-    private ConcurrentHashMap<User, Client> _Users;
-    private ServerMonitor _ServerMonitor;
-    private LinkedList<Message> _PendingMessages;
+    private final Topic _Topic;
+    private final ConcurrentHashMap<User, Client> _Users;
+    private final ServerMonitor _ServerMonitor;
+    private final LinkedList<Message> _PendingMessages;
         
     public TopicThread(Topic topic,ServerMonitor serverMonitor)
     {
@@ -102,26 +99,25 @@ public class TopicThread extends BaseThread
                                     }
                                     else if(type == Message.MessageType.PRIVATE_MESSAGE)
                                     {
-                                         fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.MESSAGE, message.getMessage().toString(), user));
-                                         try
-                                         {
-                                             User destination = (User)message.getDestination();
-                                             Client cdestination = _Users.get(user);
-                                             if(cdestination != null)
-                                             {
-                                                oos = cdestination.getObjectOutputStream();
-                                                oos.writeObject(message);
-                                             }
-                                             else
-                                             {
-                                                LoggerManager.getMainLogger().warning("Invalid message destination :"+destination.getUsername() + "(user not found) \""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
-                                              }
-                                         }
-                                         catch(ClassCastException ex)
-                                         {
-                                             LoggerManager.getMainLogger().warning("Invalid message destination content\""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
-
-                                         }
+                                        fireChatEventOccured(new ChatEvent(this, ChatEvent.ChatEventType.MESSAGE, message.getMessage().toString(), user));
+                                        try
+                                        {
+                                            User destination = (User)message.getDestination();
+                                            Client cdestination = _Users.get(user);
+                                            if(cdestination != null)
+                                            {
+                                               oos = cdestination.getObjectOutputStream();
+                                               oos.writeObject(message);
+                                            }
+                                            else
+                                            {
+                                               getLogger().warn("Invalid message destination :"+destination.getUsername() + "(user not found) \""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
+                                            }
+                                        }
+                                        catch(ClassCastException ex)
+                                        {
+                                           getLogger().warn("Invalid message destination content\""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
+                                        }
                                     }
                                     else if (type == Message.MessageType.SERVER_INFO)
                                     {
@@ -131,18 +127,18 @@ public class TopicThread extends BaseThread
                                     }
                                     else
                                     {
-                                        LoggerManager.getMainLogger().warning("Invalid message type \""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
+                                        getLogger().warn("Invalid message type \""+type+"\" from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
                                     }
                                 } 
                                 catch (ClassNotFoundException ex) 
                                 {
-                                    LoggerManager.getMainLogger().warning("Expected Message class, but received unknow data from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
+                                    getLogger().warn("Expected Message class, but received unknow data from " + client.getSocket().getInetAddress() + "("+user.getUsername()+")");
                                 }
                             }
                         } 
                         catch (IOException ex) 
                         {
-                            LoggerManager.getMainLogger().info(ex.toString());
+                            getLogger().info(ex.toString());
                             _InvalidClient.put(user, client);
                         }
                         //On ne ferme pas pck il ne faut pas fermer le flux originel
@@ -188,7 +184,7 @@ public class TopicThread extends BaseThread
                                 } 
                                 catch (IOException ex) 
                                 {
-                                     LoggerManager.getMainLogger().info(ex.toString());
+                                     getLogger().info(ex.toString());
                                      _InvalidClient.put(user, client);
                                 }
                             }
@@ -214,13 +210,13 @@ public class TopicThread extends BaseThread
                                     } 
                                     catch (IOException ex) 
                                     {
-                                         LoggerManager.getMainLogger().info(ex.toString());
-                                         _InvalidClient.put(user, client);
+                                        getLogger().info(ex.toString());
+                                        _InvalidClient.put(user, client);
                                     }
                                 }
                                 else
                                 {
-                                    LoggerManager.getMainLogger().warning("Server tried to send a private message to Invalidate User");
+                                    getLogger().warn("Server tried to send a private message to Invalidate User");
                                 }
                             }
                         }
@@ -237,14 +233,14 @@ public class TopicThread extends BaseThread
                     }
                     catch (Exception ex) 
                     {
-                        LoggerManager.getMainLogger().warning("Error while closing clent stream : " + ex.getMessage());
+                        getLogger().warn("Error while closing clent stream : " + ex.getMessage());
                     }
                 }
             //}
         }        
         closeAllConnections("Server Closed");
         setStatus(ThreadStatus.STOPPED);
-        LoggerManager.getMainLogger().info("Thread terminated");
+        getLogger().info("Thread terminated");
     }
     /**
      * Ferme toutes le connections actives en notifiant le clients.
@@ -267,7 +263,7 @@ public class TopicThread extends BaseThread
             }
             catch(Exception ex)
             {
-                LoggerManager.getMainLogger().warning("Closing all : " + ex);
+                getLogger().warn("Closing all : " + ex);
             }
         }
         _Users.clear();

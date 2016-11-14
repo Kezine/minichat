@@ -29,8 +29,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import kezine.minichat.tools.ConfigProperties;
-import kezine.minichat.tools.LoggerManager;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -44,11 +43,7 @@ public class Tools {
         public final static int DRAWED_FROM_BOTTOM_RIGHT = 4;
         
         
-        public static void initDirectories()
-	{
-		new File(ConfigProperties.LOG_FILE_PATH.substring(0, ConfigProperties.LOG_FILE_PATH.length() - 1)).mkdir();
-	}
-	/**
+        /**
 	 * @return Url du repertoire d'execution du programme
 	 */
 	public static String getDirectory()
@@ -394,7 +389,7 @@ public class Tools {
                                     String error = "Error while trying to set Look And Feel \""+lafName+"\"";
                                     if(frame != null)
                                         JOptionPane.showMessageDialog(frame, error, "Laf Error", JOptionPane.ERROR_MESSAGE);
-                                    LoggerManager.getMainLogger().warning(error);
+                                    Logger.getLogger(Tools.class).warn(error);
 
                             }
                     }

@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
@@ -13,9 +11,11 @@ import kezine.minichat.data.ServerInfos;
 import kezine.minichat.data.Topic;
 import kezine.minichat.data.User;
 import kezine.minichat.events.ServerEventListener;
-import kezine.minichat.tools.LoggerManager;
+import kezine.minichat.tools.JTextPaneAppender;
 import kezine.minichat.work.BaseThread;
 import kezine.minichat.work.server.ServerMonitor;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -28,10 +28,12 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
     private final ArrayList<Topic> [] _Topics;
     private final HashMap<User,String> [] _Users;
     private boolean shutdownRequest;
+    protected final Logger logger = Logger.getLogger(this.getClass());
+    
     public ServerMainFrame() {
         initComponents();
         _ServerMonitor = new ServerMonitor();
-        LoggerManager.setLogTextPane(jTextPaneConsole);
+        Logger.getRootLogger().addAppender(new JTextPaneAppender(jTextPaneConsole));
         _ServerMonitor.addServerEventListener(this);
         jListTopics.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         jListTopics.setModel(new DefaultListModel<Topic>());
@@ -263,7 +265,7 @@ public class ServerMainFrame extends javax.swing.JFrame implements ServerEventLi
         } 
         catch (IOException ex) 
         {
-            Logger.getLogger(ServerMainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            logger.log(Level.FATAL, null, ex);
         }
     }//GEN-LAST:event_jButtonServerStateActionPerformed
 

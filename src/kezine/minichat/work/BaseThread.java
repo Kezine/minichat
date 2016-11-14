@@ -1,9 +1,9 @@
 package kezine.minichat.work;
 
-import java.util.logging.Level;
 import javax.swing.event.EventListenerList;
 import kezine.minichat.events.ThreadEventListener;
-import kezine.minichat.tools.LoggerManager;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Classe de base des threads de l'application
@@ -15,6 +15,7 @@ public abstract class BaseThread extends Thread
     * Gère les diffèrent status dans lequels les threads de l'application peuvent se trouver.
     * @author Kezine
     */
+    private final Logger logger = Logger.getLogger(this.getClass());
     public enum ThreadStatus
     {
        INITED("Innited"),RUNNING("Running"),STOPPING("Stopping"),FAILED("Failed"),STOPPED("Stopped"),STOPPED_WITH_ERROR("StoppedWithError");
@@ -64,11 +65,11 @@ public abstract class BaseThread extends Thread
     synchronized protected final void setErrorMessage(String errorMessage,Level level)
     {
         _ErrorMessage = errorMessage;
-        LoggerManager.getMainLogger().log(level,_ErrorMessage);
+        logger.log(level,_ErrorMessage);
     }
     synchronized protected final void setErrorMessage(String errorMessage)
     {
-        setErrorMessage(errorMessage,Level.WARNING);
+        setErrorMessage(errorMessage,Level.WARN);
     }
     synchronized public  void stopThread()
     {
@@ -77,7 +78,7 @@ public abstract class BaseThread extends Thread
     @Override
     public void start()
     {
-        LoggerManager.getMainLogger().info("Thread "+getName()+" is starting");
+        logger.info("Thread "+getName()+" is starting");
         setStatus(ThreadStatus.RUNNING);
         super.start();
     }
@@ -96,5 +97,10 @@ public abstract class BaseThread extends Thread
         {
             listener.ThreadStatusChanged(this,status);
         }
+    }
+    
+    protected final Logger getLogger()
+    {
+        return logger;
     }
 }

@@ -1,24 +1,57 @@
 package kezine.minichat;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.Properties;
 import javax.swing.SwingUtilities;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.ui.client.ClientMainFrame;
 import kezine.minichat.ui.server.ServerMainFrame;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 /**
  * Point d'entrée de l'application "Minichat"
  * @author Kezine
  */
-public class MiniChat {
-
+public class MiniChat 
+{
     public static void main(String[] args) throws IOException 
     {
         int argsValue = 0;
         boolean interfaceTypeChosen = false;
+        System.out.println("Java Version: " + System.getProperties().getProperty("java.version"));
+        System.out.println("Java Home: " + System.getProperties().getProperty("java.home"));
+        System.out.println("Working Directory: " + System.getProperties().getProperty("user.dir"));
+	System.out.println("User Directory: " + System.getProperties().getProperty("user.home"));
+        
+        Properties p = new Properties();
+        try 
+        {
+            String fileLocation = System.getProperties().getProperty("user.dir") + File.separatorChar + "log4j.properties";
+            System.out.println("Looking for log4j properties file at " + fileLocation);
+            p.load(new FileInputStream(fileLocation));
+            PropertyConfigurator.configure(p);
+            Logger.getRootLogger().info("log4J configured");
+            Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler()
+                {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e)
+                    {
+                        e.printStackTrace();
+                        Logger.getLogger(MiniChat.class).warn("Uncaugth exception from thread \""+t.getName()+"\" handled in main.", e);
+                    }
+                });
+        } 
+        catch (IOException e) 
+        {
+           System.err.println("Cannot Load log4j properties");
+           e.printStackTrace();
+        }
         if(args.length > 2)
         {
-            LoggerManager.getMainLogger().severe("Too many arguments !");
+            Logger.getLogger(MiniChat.class).fatal("Too many arguments !");
             System.exit(1);
         }
         for(int i = 0; i < args.length; i++)
@@ -59,10 +92,10 @@ public class MiniChat {
     
     public static void startClientApplication(boolean isGraphical)
     {
-        LoggerManager.getMainLogger().info("Starting client application");        
+        Logger.getLogger(MiniChat.class).info("Starting client application");        
         if(isGraphical)
         {
-            LoggerManager.getMainLogger().info("Starting graphical interface");
+            Logger.getLogger(MiniChat.class).info("Starting graphical interface");
             final ClientMainFrame cf = new ClientMainFrame();
             Tools.setLookAndFeel(cf, "Windows");
             SwingUtilities.invokeLater(new Runnable() {               
@@ -79,11 +112,11 @@ public class MiniChat {
     }
     public static void startServerApplication(boolean isGraphical) throws IOException
     {
-        LoggerManager.getMainLogger().info("Starting server application");
+        Logger.getLogger(MiniChat.class).info("Starting server application");
         
         if(isGraphical)
         {
-            LoggerManager.getMainLogger().info("Starting graphical interface");
+            Logger.getLogger(MiniChat.class).info("Starting graphical interface");
             final ServerMainFrame sf = new ServerMainFrame();
             Tools.setLookAndFeel(sf, "Windows");
             SwingUtilities.invokeLater(new Runnable() {               

@@ -3,12 +3,10 @@ package kezine.minichat.work.client;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.util.LinkedList;
-import java.util.logging.Level;
 import kezine.minichat.data.Message;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
+import org.apache.log4j.Level;
 
 /**
  *
@@ -16,8 +14,8 @@ import kezine.minichat.work.BaseThread;
  */
 public class ChatSender extends BaseThread
 {
-    private LinkedList<Message> _MessageQueue;
-    private OutputStream _OutputStream;
+    private final LinkedList<Message> _MessageQueue;
+    private final OutputStream _OutputStream;
     public ChatSender(String name, OutputStream outputStream) 
     {
         super(name);
@@ -37,7 +35,7 @@ public class ChatSender extends BaseThread
         } 
         catch (IOException ex) 
         {
-           setErrorMessage("Error while initializing OutputStream : " + ex.getMessage(), Level.SEVERE);
+           setErrorMessage("Error while initializing OutputStream : " + ex.getMessage(), Level.FATAL);
            setStatus(ThreadStatus.STOPPED_WITH_ERROR);
         }
         while(getStatus() == ThreadStatus.RUNNING)
@@ -48,12 +46,12 @@ public class ChatSender extends BaseThread
                 try 
                 {
                     oos.writeObject(message);
-                    LoggerManager.getMainLogger().info("Message sent");
+                    getLogger().info("Message sent");
                     
                 } 
                 catch (IOException ex) 
                 {
-                    setErrorMessage("Error while trying to send a message : "+ex.getMessage(), Level.SEVERE);
+                    setErrorMessage("Error while trying to send a message : "+ex.getMessage(), Level.FATAL);
                     setStatus(ThreadStatus.FAILED);
                 }
             }
@@ -76,7 +74,7 @@ public class ChatSender extends BaseThread
             } 
             catch (IOException ex) 
             {
-                setErrorMessage("Error while closing OutputStream : " + ex.getMessage(), Level.WARNING);
+                setErrorMessage("Error while closing OutputStream : " + ex.getMessage(), Level.WARN);
                 setStatus(ThreadStatus.STOPPED_WITH_ERROR);
             }
         }

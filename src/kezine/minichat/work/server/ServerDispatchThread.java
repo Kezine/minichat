@@ -6,9 +6,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.logging.Level;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
+import org.apache.log4j.Level;
 /**
  * Thread servant d'entrée pour le serveur de chat. Accepte les connections sur le port "Serveur" et transfert la connection dans fifo du pool de thread.
  * Gère le création/suression de ce mème pool.
@@ -16,11 +15,11 @@ import kezine.minichat.work.BaseThread;
  */
 public class ServerDispatchThread extends BaseThread
 {
-    private ServerSocket _ServerSocket;
-    private ServerMonitor _ServerMonitor;
-    private LinkedList<Socket> _PendingClients;
-    private ArrayList<ServerPoolThread> _PoolThreads;
-    private int _PoolSize;
+    private final ServerSocket _ServerSocket;
+    private final ServerMonitor _ServerMonitor;
+    private final LinkedList<Socket> _PendingClients;
+    private final ArrayList<ServerPoolThread> _PoolThreads;
+    private final int _PoolSize;
     
     public ServerDispatchThread(ServerMonitor server,ServerSocket serverSocket,int poolAcceptSize)
     {
@@ -72,7 +71,7 @@ public class ServerDispatchThread extends BaseThread
                         
                     }
                     if(address != null)
-                        LoggerManager.getMainLogger().info("New client : " + address + " added in pending list");
+                       getLogger().info("New client : " + address + " added in pending list");
                 
                 }
                 catch(SocketTimeoutException ex)
@@ -100,22 +99,22 @@ public class ServerDispatchThread extends BaseThread
         }
         else
         {
-            setErrorMessage("ServerSocket is not bound !",Level.SEVERE);
+            setErrorMessage("ServerSocket is not bound !",Level.FATAL);
             setStatus(ThreadStatus.STOPPED_WITH_ERROR);
         }
-        LoggerManager.getMainLogger().info("Thread terminated");
+       getLogger().info("Thread terminated");
     }
     /**
      * Arrète les threads du pool
      */
     private void closePool()
     {
-        LoggerManager.getMainLogger().info("Closing thread pool");
+       getLogger().info("Closing thread pool");
         for(ServerPoolThread thread : _PoolThreads)
         {
             thread.stopThread();
         }
-        LoggerManager.getMainLogger().info("Closing thread : Waiting ...");
+       getLogger().info("Closing thread : Waiting ...");
         for(ServerPoolThread thread : _PoolThreads)
         {
             while(thread.getStatus() != ThreadStatus.STOPPED && thread.getStatus() != ThreadStatus.STOPPED_WITH_ERROR)
@@ -123,7 +122,7 @@ public class ServerDispatchThread extends BaseThread
                 try {sleep(10);} catch (InterruptedException ex) {}//Attente de l'arret du pool
             }
         }
-        LoggerManager.getMainLogger().info("Thread pool closed");
+       getLogger().info("Thread pool closed");
     }
     /**
      * Vide la fifo du pool de threads
@@ -144,7 +143,7 @@ public class ServerDispatchThread extends BaseThread
      */
     private void generatePool(int poolSize)
     {
-        LoggerManager.getMainLogger().info("Generating thread pool");
+       getLogger().info("Generating thread pool");
         for(int i = 0; i < poolSize; i++)
         {
             ServerPoolThread temp = new ServerPoolThread(i,this,_ServerMonitor);

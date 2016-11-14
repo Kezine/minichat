@@ -3,12 +3,11 @@ package kezine.minichat.work.client;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
-import java.util.logging.Level;
 import kezine.minichat.data.Message;
 import kezine.minichat.events.ChatEvent;
 import kezine.minichat.events.ChatEventListener;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
+import org.apache.log4j.Level;
 
 /**
  *
@@ -35,7 +34,7 @@ public class ChatReceiver extends BaseThread
         } 
         catch (IOException ex) 
         {
-           setErrorMessage("Error while initializing InputStream : " + ex.getMessage(), Level.SEVERE);
+           setErrorMessage("Error while initializing InputStream : " + ex.getMessage(), Level.FATAL);
            setStatus(ThreadStatus.STOPPED_WITH_ERROR);
         }
         while(getStatus() == ThreadStatus.RUNNING)
@@ -48,16 +47,16 @@ public class ChatReceiver extends BaseThread
             }
             catch(ClassNotFoundException ex)
             {
-                LoggerManager.getMainLogger().log(Level.WARNING, "Trying to read a message but recieved unknow data : {0}", ex.getMessage());
+                getLogger().log(Level.WARN, "Trying to read a message but recieved unknow data : {0}", ex);
             }
             catch (IOException ex) 
             {
-                setErrorMessage("Error while trying to read a message : "+ex.getMessage(), Level.SEVERE);
+                setErrorMessage("Error while trying to read a message : "+ex.getMessage(), Level.FATAL);
                 setStatus(ThreadStatus.FAILED);
             }
             catch(Exception ex)
             {
-                setErrorMessage("Error while trying to read a message : "+ex.getMessage(), Level.SEVERE);
+                setErrorMessage("Error while trying to read a message : "+ex.getMessage(), Level.FATAL);
                 setStatus(ThreadStatus.FAILED);
             }
             
@@ -72,7 +71,7 @@ public class ChatReceiver extends BaseThread
             } 
             catch (IOException ex) 
             {
-                setErrorMessage("Error while closing InputStream : " + ex.getMessage(), Level.WARNING);
+                setErrorMessage("Error while closing InputStream : " + ex.getMessage(), Level.WARN);
                 setStatus(ThreadStatus.STOPPED_WITH_ERROR);
             }
         }

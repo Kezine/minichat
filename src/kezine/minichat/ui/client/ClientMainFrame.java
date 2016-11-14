@@ -15,10 +15,10 @@ import kezine.minichat.data.User;
 import kezine.minichat.events.ChatEvent;
 import kezine.minichat.events.ChatEventListener;
 import kezine.minichat.events.ThreadEventListener;
-import kezine.minichat.tools.LoggerManager;
 import kezine.minichat.work.BaseThread;
 import kezine.minichat.work.client.ChatReceiver;
 import kezine.minichat.work.client.ChatSender;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -33,6 +33,7 @@ public class ClientMainFrame extends javax.swing.JFrame implements ChatEventList
     private short _ConnexionState;
     boolean _RequestShutdown;
     long nom;
+    protected final Logger logger = Logger.getLogger(this.getClass());
     public ClientMainFrame() {
         initComponents();
         _ChatReceiver = null;
@@ -196,7 +197,7 @@ public class ClientMainFrame extends javax.swing.JFrame implements ChatEventList
             catch (IOException ex) 
             {
                 String message = "Error while connecting : " + ex.getMessage();
-                LoggerManager.getMainLogger().warning(message);
+                logger.warn(message);
                 JOptionPane.showMessageDialog(this, message, "Connexion Error", JOptionPane.ERROR_MESSAGE);
             }
         }
@@ -223,9 +224,14 @@ public class ClientMainFrame extends javax.swing.JFrame implements ChatEventList
     }//GEN-LAST:event_jMenuItemDeconnexionActionPerformed
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
-        setEnabled(false);
-        _RequestShutdown = true;
-        disconnexion();
+        if(_ConnexionState != 0)
+        {
+            setEnabled(false);
+            _RequestShutdown = true;
+            disconnexion();
+        }
+        else
+            System.exit(0);
     }//GEN-LAST:event_formWindowClosing
     
     private void disconnexion()
@@ -236,7 +242,7 @@ public class ClientMainFrame extends javax.swing.JFrame implements ChatEventList
             _ChatSender.stopThread();
             _ChatReceiver.stopThread();
             _ConnexionState = 2;
-        }
+        }        
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -304,6 +310,7 @@ public class ClientMainFrame extends javax.swing.JFrame implements ChatEventList
                 ++_ConnexionState;
         if(_ConnexionState == 4)
         {
+            logger.info("ConnexionState : " + _ConnexionState);
             SwingUtilities.invokeLater(new Runnable() 
             {
                 @Override
